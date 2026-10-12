@@ -1,0 +1,141 @@
+#!/usr/bin/python3
+"""Run Python code against the LibreOffice instance on the sandbox desktop via UNO.
+
+Must run with Debian's /usr/bin/python3: the `uno` module is not available to
+/usr/local/bin/python3.
+"""
+
+import argparse
+import os
+import subprocess
+import sys
+import time
+
+import uno
+from com.sun.star.beans import PropertyValue
+from com.sun.star.connection import NoConnectException
+
+PORT = int(os.environ.get("LO_UNO_PORT", "2002"))
+CONNECT_URL = f"uno:socket,host=127.0.0.1,port={PORT};urp;StarOffice.ComponentContext"
+ACCEPT_ARG = f"--accept=socket,host=127.0.0.1,port={PORT};urp;"
+
+USAGE_EXAMPLES = """\
+The code runs with these names predefined:
+  ctx       remote component context
+  smgr      remote service manager
+  desktop   com.sun.star.frame.Desktop
+  doc       the active component at startup (desktop.getCurrentComponent());
+            may be None or the Start Center, so prefer the return of open_doc/new_doc
+  uno       the uno module
+  props(**kw)          -> tuple of PropertyValue, e.g. props(FilterName="writer_pdf_Export")
+  open_doc(path, **kw) -> load a file (or a "private:factory/swriter|scalc|simpress" URL)
+  new_doc(kind)        -> new "writer" | "calc" | "impress" | "draw" document
+  to_url(path)         -> file:// URL for a local path
+
+Examples:
+  lo-uno -c 'd = new_doc("writer"); d.Text.setString("안녕하세요")'
+  lo-uno -c 'd = open_doc("~/data.xlsx"); print(d.Sheets.getByIndex(0).getCellRangeByName("A1").getString())'
+  lo-uno -c 'd = open_doc("~/report.docx"); d.storeToURL(to_url("/tmp/out.pdf"), props(FilterName="writer_pdf_Export"))'
+  lo-uno -c 'doc.store()'   # save the document currently in front
+  lo-uno script.py
+  echo 'print(new_doc("calc").Sheets.Count)' | lo-uno -
+"""
+
+
+def props(**kwargs):
+    return tuple(PropertyValue(Name=name, Value=value) for name, value in kwargs.items())
+
+
+def to_url(path):
+    return uno.systemPathToFileUrl(os.path.abspath(os.path.expanduser(path)))
+
+
+def try_connect():
+    local_ctx = uno.getComponentContext()
+    resolver = local_ctx.ServiceManager.createInstanceWithContext("com.sun.star.bridge.UnoUrlResolver", local_ctx)
+    try:
+        return resolver.resolve(CONNECT_URL)
+    except NoConnectException:
+        return None
+
+
+def launch_office():
+    env = dict(os.environ)
+    # Default display of the computer-use plugin's Xvfb
+    env.setdefault("DISPLAY", ":1")
+    # If LibreOffice is already running without the socket, this hands the
+    # --accept request over to that instance instead of starting a second one.
+    subprocess.Popen(
+        ["soffice", "--norestore", "--nologo", ACCEPT_ARG],
+        env=env,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+def connect(timeout):
+    ctx = try_connect()
+    if ctx is not None:
+        return ctx
+    launch_office()
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        time.sleep(0.5)
+        ctx = try_connect()
+        if ctx is not None:
+            return ctx
+    sys.exit(f"lo-uno: could not connect to LibreOffice on port {PORT} within {timeout}s")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="lo-uno",
+        description="Run Python code against the running LibreOffice (started with a UNO socket if needed).",
+        epilog=USAGE_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("-c", dest="code", help="code to run")
+    source.add_argument("script", nargs="?", help="Python file to run, or - for stdin")
+    parser.add_argument("--timeout", type=float, default=30, help="seconds to wait for LibreOffice (default 30)")
+    args = parser.parse_args()
+
+    if args.code is not None:
+        code, filename = args.code, "<lo-uno -c>"
+    elif args.script == "-":
+        code, filename = sys.stdin.read(), "<stdin>"
+    else:
+        with open(args.script, encoding="utf-8") as f:
+            code, filename = f.read(), args.script
+
+    ctx = connect(args.timeout)
+    smgr = ctx.ServiceManager
+    desktop = smgr.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
+
+    def open_doc(path, **kwargs):
+        url = path if "://" in path or path.startswith("private:") else to_url(path)
+        return desktop.loadComponentFromURL(url, "_blank", 0, props(**kwargs))
+
+    def new_doc(kind):
+        factory = {"writer": "swriter", "calc": "scalc", "impress": "simpress", "draw": "sdraw"}[kind]
+        return desktop.loadComponentFromURL(f"private:factory/{factory}", "_blank", 0, ())
+
+    namespace = {
+        "__name__": "__main__",
+        "uno": uno,
+        "ctx": ctx,
+        "smgr": smgr,
+        "desktop": desktop,
+        "doc": desktop.getCurrentComponent(),
+        "props": props,
+        "to_url": to_url,
+        "open_doc": open_doc,
+        "new_doc": new_doc,
+    }
+    exec(compile(code, filename, "exec"), namespace)
+
+
+if __name__ == "__main__":
+    main()

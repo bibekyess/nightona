@@ -12,9 +12,23 @@ COPY xfce4-desktop.xml /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.x
 # Brand shown in the top-right panel (the Xfce action button displays the user's full name)
 RUN usermod -c "khururu" nightona
 
-# Extra packages for custom workflows go here, e.g.:
-# RUN apt-get update && apt-get install -y --no-install-recommends libreoffice \
-#     && rm -rf /var/lib/apt/lists/*
+# LibreOffice with UNO bindings (python3-uno targets Debian's /usr/bin/python3) and
+# AT-SPI bindings, plus fonts covering most scripts (CJK, Korean Nanum, emoji, and
+# metric-compatible substitutes for Calibri/Cambria)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-gtk3 \
+        python3-uno python3-pyatspi \
+        fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji fonts-nanum \
+        fonts-crosextra-carlito fonts-crosextra-caladea \
+    && fc-cache -f \
+    && rm -rf /var/lib/apt/lists/*
+
+# UNO helper and agent instructions
+COPY --chmod=755 lo-uno /usr/local/bin/lo-uno
+COPY --chown=nightona:nightona AGENTS.md /home/nightona/AGENTS.md
 
 # The computer-use plugin and toolbox expect to run as the nightona user
 USER nightona
+
+# Claude Code reads CLAUDE.md rather than AGENTS.md
+RUN ln -s AGENTS.md /home/nightona/CLAUDE.md
