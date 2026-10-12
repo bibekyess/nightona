@@ -7,7 +7,7 @@ services:
     environment:
       - OTEL_ENABLED=true
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - DEFAULT_SNAPSHOT=registry:6000/nightona/custom-sandbox:0.6.0-custom.2
+      - DEFAULT_SNAPSHOT=registry:6000/nightona/custom-sandbox:0.6.0-custom.3
       # Allow initial snapshot pulls on a busy single-host runner (score < 30)
       - RUNNER_INITIAL_RUNNER_SCORE_ADDON=0
       - ENCRYPTION_KEY=supersecretkey
