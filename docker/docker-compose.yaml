@@ -7,8 +7,7 @@ services:
     environment:
       - OTEL_ENABLED=true
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      # Default to slim image for faster startup
-      - DEFAULT_SNAPSHOT=ghcr.io/nightona-co/sandbox:0.6.0-slim
+      - DEFAULT_SNAPSHOT=ghcr.io/nightona-co/sandbox:0.6.0
       - ENCRYPTION_KEY=supersecretkey
       - ENCRYPTION_SALT=supersecretsalt
       - NODE_ENV=production
@@ -108,6 +107,7 @@ services:
     image: daytonaio/daytona-proxy # upstream image; replace when Nightona publishes its own
     environment:
       - NIGHTONA_API_URL=http://api:3000/api
+      - DAYTONA_API_URL=http://api:3000/api
       - PROXY_PORT=4000
       - PROXY_API_KEY=super_secret_key
       - PROXY_PROTOCOL=http
@@ -132,6 +132,7 @@ services:
       - ENVIRONMENT=development
       - API_PORT=3003
       - NIGHTONA_RUNNER_TOKEN=secret_api_token
+      - DAYTONA_RUNNER_TOKEN=secret_api_token
       - LOG_FILE_PATH=/home/nightona/runner/runner.log
       - RESOURCE_LIMITS_DISABLED=true
       - AWS_ENDPOINT_URL=http://minio:9000
@@ -140,6 +141,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=minioadmin
       - AWS_DEFAULT_BUCKET=nightona
       - NIGHTONA_API_URL=http://api:3000/api
+      - DAYTONA_API_URL=http://api:3000/api
       - RUNNER_DOMAIN=runner
       - SSH_GATEWAY_ENABLE=true
       - SSH_PUBLIC_KEY=c3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFCZ1FEZUtocFdOYVhVNkpSMnJXekc1NlZJeksrcmsrdForcCtVUmwyeWF5cWRnZGg2bnVOL1NtVnJsYmV4MGlrRVZZemdRWUIwWno5M2dqOVhxSkd4WjJiMHVoSDFzNkp2bnhKZVdIK05rbjBNMzRiRjZkeVloZ3o4M0JaTitWcElJdnVDT1pxYWE4VnlRWjhPdjVLMU00enlmQnFCMld3ejcwZEVWUnFaMnVZckd5U0RqUUIrU3hRQ3phY0djb2JRQTFUd2QxdEJvSk5BaVpPWXFSU3d6TmNoTk5hZHlxSHRGdkZRQ0hhNjZWaVBmQ0FVUGt2cEN6ZGh3TmJGdVhGVWkxbnZOWkx4M056RU41M05LWUhZcWU3Y3dXZkI4QjBoRDhDd3hmSDd6T0o1b1RCMnBMVVlsUWpZRDNsN3k4SkFTbDZpYkpuR1A1SWczVXpZWlRIdUdkNzVXWktnNTRJTVROQlFPMWpJdE9HL0orUm1XbzB0YTdpRkF6ZExyL1BmbDdXTVMwbEZhSm9scTdUVmJLUG1JODFTOU04VEgrbXhLbGZ5b2NqZzhwSUdlQUllcEo3dXl1Vk1xT2wxeVVuSFNycDRlVEVlR0k3NlpCOFRoUzhkYnBLUTIvb2RYMHkwc3FSZDI0Y2lGdnM0dnZVaW80NFdYNlNWRG54dXpWRHc1Rzg9IGRheXRvbmFAMDQwNjZiZDIwY2Vi
