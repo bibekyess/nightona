@@ -9,6 +9,9 @@ USER root
 COPY wallpaper.png /usr/share/backgrounds/nightona/wallpaper.png
 COPY xfce4-desktop.xml /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 
+# Brand shown in the top-right panel (the Xfce action button displays the user's full name)
+RUN usermod -c "khururu" nightona
+
 # Extra packages for custom workflows go here, e.g.:
 # RUN apt-get update && apt-get install -y --no-install-recommends libreoffice \
 #     && rm -rf /var/lib/apt/lists/*
